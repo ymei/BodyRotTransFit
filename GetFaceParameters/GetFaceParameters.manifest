@@ -1,0 +1,10 @@
+{
+        "autodeskProduct":      "Fusion360",
+        "type": "script",
+        "author":       "Yuan Mei",
+        "description":  {
+                "":     "Get parameters of selected faces"
+        },
+        "supportedOS":  "windows|mac",
+        "editEnabled":  true
+}

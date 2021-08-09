@@ -1,0 +1,17 @@
+# L0 North EndWheel faces
+## format:
+## fid ftype x0 y0 z0 nx ny nz r
+# Bottom surface
+0       1    0.0   -0.75     0.0     0.0     0.0    -1.0     0.0
+# Bottom inner cylindrical
+1       2    0.0   -0.75     2.8     0.0     0.0    -1.0   22.83
+# Cylinder cutout face
+2       1    0.0     0.0     2.8     0.0    -1.0     0.0     0.0
+# Cutout face recessed
+3       1    0.0 3.28666 -3.870728   0.0    -1.0     0.0     0.0
+# Outer cylindrical
+4       2    0.0   -0.75     2.8     0.0     0.0     1.0   30.57
+# Top surface
+5       1    0.0   -0.75    30.0     0.0     0.0     1.0     0.0
+# Stave surface
+6       1 -1.38805 25.73442 2.80000 0.052338 -0.998629 0.0   0.0
