@@ -94,7 +94,7 @@ int dist_f(const gsl_vector *p, void *data, gsl_vector *f)
 
         double x1, y1, z1;
         x1 = Ca*Cb * (x[i]+xt) + (Ca*Sb*Sg-Sa*Cg) * (y[i]+yt) + (Ca*Sb*Cg+Sa*Sg) * (z[i]+zt);
-        y1 = Sa*Cb * (x[i]+xt) + (Sa*Sb*Sg+Ca*Cg) * (y[i]+yt) + (Sa*Sb*Cg-Ca*Cg) * (z[i]+zt);
+        y1 = Sa*Cb * (x[i]+xt) + (Sa*Sb*Sg+Ca*Cg) * (y[i]+yt) + (Sa*Sb*Cg-Ca*Sg) * (z[i]+zt);
         z1 =  - Sb * (x[i]+xt) +            Cb*Sg * (y[i]+yt) +            Cb*Cg * (z[i]+zt);
 
         ((struct data *)data)->x1[i] = x1;
@@ -242,7 +242,7 @@ int read_faces(const char *fname, size_t *n, struct face **faces)
         int ret = sscanf(linebuf, "%d %d %lf %lf %lf %lf %lf %lf %lf", &fid, &fc.ftype,
                          &fc.x0, &fc.y0, &fc.z0, &fc.nx, &fc.ny, &fc.nz, &fc.r);
         if (ret < 9 || fid < 0 || fc.ftype <= 0) {
-            fprintf(stderr, "Malformatted face at line %zd\n", lid);
+            fprintf(stderr, "Malformatted face at line %zd, skipped.\n", lid);
         } else {
             if (fid >= *n) break;
             struct face *fc1 = *faces;
@@ -304,11 +304,26 @@ int read_points(const char *fname, size_t *n, struct data *data)
     while (file_read_long_line(&linebuf, &linen, fp)) {
         lid++;
         if (linebuf[0] == '#' || linebuf[0] == '\n') continue;
-        int fid = 0;
+        int fid = 0, ret = 0;
         double x, y, z, s;
-        int ret = sscanf(linebuf, "%*d;%d;%*s ;%*d;%lf;%lf;%lf;;%lf", &fid, &x, &y, &z, &s);
+        // ret = sscanf(linebuf, "%*d;%d;%*s ;%*d;%lf;%lf;%lf;;%lf", &fid, &x, &y, &z, &s);
+        char *buf = linebuf, *endptr;
+        for (; *buf != ';' ; buf++){;} buf++; /* find the next character past a ';' */
+        fid = strtol(buf, &endptr, 0); if (endptr > buf) ret++; buf = endptr++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        x = strtod(buf, &endptr); if (endptr > buf) ret++; buf = endptr++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        y = strtod(buf, &endptr); if (endptr > buf) ret++; buf = endptr++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        z = strtod(buf, &endptr); if (endptr > buf) ret++; buf = endptr++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        for (; *buf != ';' ; buf++){;} buf++;
+        s = strtod(buf, &endptr); if (endptr > buf) ret++; buf = endptr++;
+
         if (ret < 5 || fid < 0) {
-            fprintf(stderr, "Malformatted point at line %zd\n", lid);
+            fprintf(stderr, "Malformatted point at line %zd, skipped.\n", lid);
         } else {
             data->fid[idx] = fid;
             data->x[idx] = x;
