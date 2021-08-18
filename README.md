@@ -4,6 +4,9 @@ This program addresses a common measurement problem.  Using CMM (coordinate meas
 
 The penalty function for the fit is the sum of squares of the shortest distances from all points to their respective faces.  The measurement uncertainties (sigma) can be supplied, which will be used as weights in the penalty function.  A nonlinear least-squares fitting function in [GSL](https://www.gnu.org/software/gsl/) is used.  After the fit, the fit parameters, errors, and residual distances of all points are reported.
 
+  - A `FACE_LINE` is a cylinder with `r=0` and no probe radius (`pr`) offset.
+  - A `FACE_POINT` is a sphere with `r=0` and no probe radius (`pr`) offset.
+
 ## Input file format
 See `examples/`.
 

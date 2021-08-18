@@ -36,8 +36,10 @@
 
 enum {
     FACE_PLANE=1,
-    FACE_CYLINDER,
-    FACE_SPHERE
+    FACE_CYLINDER=2,
+    FACE_SPHERE=3,
+    FACE_LINE=12,
+    FACE_POINT=13
 };
 
 struct face {
@@ -52,6 +54,7 @@ struct face {
 };
 
 struct data {
+    double pr;   /**< probe radius */
     const struct face *faces;
     size_t n;    /**< number of measured data points */
     size_t *fid; /**< idx of face in the registered faces */
@@ -67,6 +70,7 @@ struct data {
 /** Distance from measured point to face. */
 int dist_f(const gsl_vector *p, void *data, gsl_vector *f)
 {
+    double pr = ((struct data *)data)->pr;
     const struct face *faces = ((struct data *)data)->faces;
     size_t n = ((struct data *)data)->n;
     size_t *fid = ((struct data *)data)->fid;
@@ -107,16 +111,23 @@ int dist_f(const gsl_vector *p, void *data, gsl_vector *f)
             d = -(nx*x0 + ny*y0 + nz*z0);
             dist = fabs(nx*x1 + ny*y1 + nz*z1 + d)
                 / sqrt(nx*nx + ny*ny + nz*nz);
+            dist -= pr;
             break;
         case FACE_CYLINDER:
+        case FACE_LINE:
         {
             double dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
             double s1 = dy * nz - dz * ny, s2 = dz*nx - dx*nz, s3 = dx*ny - dy*nx;
             dist = fabs(sqrt((s1*s1 + s2*s2 + s3*s3)/(nx*nx + ny*ny + nz*nz)) - r);
+            if (ftype == FACE_CYLINDER)
+                dist -= pr;
         }
             break;
         case FACE_SPHERE:
+        case FACE_POINT:
             dist = fabs(sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0) + (z1-z0)*(z1-z0)) - r);
+            if (ftype == FACE_SPHERE)
+                dist -= pr;
             break;
         default:
             dist = 0.0;
@@ -342,9 +353,10 @@ int read_points(const char *fname, size_t *n, struct data *data)
 
 int main(int argc, char **argv)
 {
-    if (argc != 9) {
+    if (argc != 10) {
         fprintf(stderr,
-                "Usage: %s faces_file points_file a b g xt yt zt\n\n"
+                "Usage: %s faces_file points_file pr a b g xt yt zt\n\n"
+                "    pr is the probe radius.\n"
                 "    The last 6 parameters are initial guesses.\n"
                 "    Points are first translated, then rotated about x(g), y(b), z(a).\n"
                 "    The 2nd column in points_file shall be faceid,\n"
@@ -361,10 +373,12 @@ int main(int argc, char **argv)
     read_points(argv[2], &nd, &data);
     data.faces = faces;
 
+    data.pr = atof(argv[3]);
+
     #define np 6
     double p_init[np] = {0}; /* starting values */
     for (int i=0; i<np; i++) {
-        p_init[i] = atof(argv[3+i]);
+        p_init[i] = atof(argv[4+i]);
     }
 
     const gsl_multifit_nlinear_type *T = gsl_multifit_nlinear_trust;
@@ -452,9 +466,9 @@ int main(int argc, char **argv)
 
     /* compute residual of every point */
     dist_f(w->x, &data, f); // pure distance, no weights.
-    printf("#    fid   ftype distance          x1          y1          z1\n");
+    printf("#    fid   ftype  distance          x1          y1          z1\n");
     for (int i=0; i<nd; i++) {
-        printf("%8zd %7d %8.6f %11.5f %11.5f %11.5f\n", data.fid[i], faces[data.fid[i]].ftype,
+        printf("%8zd %7d %9.6f %11.5f %11.5f %11.5f\n", data.fid[i], faces[data.fid[i]].ftype,
                gsl_vector_get(f, i), data.x1[i], data.y1[i], data.z1[i]);
     }
 
