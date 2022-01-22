@@ -32,7 +32,9 @@
 #define sepq(a) ((a)==' ' || (a)=='\t')
 #endif
 
-#define NDIM   3    /**< number of dimensions */
+#define NUM_PENALTY 1000000 /**< numerical penalty, assigned to values
+                                 when faulty conditions occur */
+#define NDIM        3       /**< number of dimensions */
 
 enum {
     FACE_PLANE=1,
@@ -105,12 +107,14 @@ int dist_f(const gsl_vector *p, void *data, gsl_vector *f)
         ((struct data *)data)->y1[i] = y1;
         ((struct data *)data)->z1[i] = z1;
 
-        double d, dist=0.0;
-        switch (ftype) {
+        double d0, d1, dist=0.0;
+        switch (abs(ftype)) {
         case FACE_PLANE:
-            d = -(nx*x0 + ny*y0 + nz*z0);
-            dist = fabs(nx*x1 + ny*y1 + nz*z1 + d)
-                / sqrt(nx*nx + ny*ny + nz*nz);
+            d0 = -(nx*x0 + ny*y0 + nz*z0);
+            d1 = (nx*x1 + ny*y1 + nz*z1);
+            dist = (d1 + d0) / sqrt(nx*nx + ny*ny + nz*nz);
+            /* if dist<0, the point is on the wrong side of the plane.
+             * The next line will penalize this condition. */
             dist -= pr;
             break;
         case FACE_CYLINDER:
@@ -118,16 +122,26 @@ int dist_f(const gsl_vector *p, void *data, gsl_vector *f)
         {
             double dx = x1 - x0, dy = y1 - y0, dz = z1 - z0;
             double s1 = dy * nz - dz * ny, s2 = dz*nx - dx*nz, s3 = dx*ny - dy*nx;
-            dist = fabs(sqrt((s1*s1 + s2*s2 + s3*s3)/(nx*nx + ny*ny + nz*nz)) - r);
-            if (ftype == FACE_CYLINDER)
-                dist -= pr;
+            dist = sqrt((s1*s1 + s2*s2 + s3*s3)/(nx*nx + ny*ny + nz*nz)) - r;
+            if (abs(ftype) == FACE_CYLINDER) {
+                if (ftype > 0) { /* point outside of the cylinder */
+                    dist -= pr;
+                } else { /* inside */
+                    dist = -dist - pr;
+                }
+            }
         }
             break;
         case FACE_SPHERE:
         case FACE_POINT:
-            dist = fabs(sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0) + (z1-z0)*(z1-z0)) - r);
-            if (ftype == FACE_SPHERE)
-                dist -= pr;
+            dist = sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0) + (z1-z0)*(z1-z0)) - r;
+            if (abs(ftype) == FACE_SPHERE) {
+                if (ftype > 0) { /* point outside of the sphere */
+                    dist -= pr;
+                } else { /* inside */
+                    dist = -dist - pr;
+                }
+            }
             break;
         default:
             dist = 0.0;
@@ -222,7 +236,7 @@ int read_faces(const char *fname, size_t *n, struct face **faces)
         /* get number of elements in the file */
         while (file_read_long_line(&linebuf, &linen, fp)) {
             lid++;
-            if (linebuf[0] == '#' || linebuf[0] == '\n') continue;
+            if (linebuf[0] == '#' || linebuf[0] == '\r' || linebuf[0] == '\n') continue;
             int ret = sscanf(linebuf, "%d %d %lf %lf %lf %lf %lf %lf %lf", &fid, &fc.ftype,
                              &fc.x0, &fc.y0, &fc.z0, &fc.nx, &fc.ny, &fc.nz, &fc.r);
             if (ret < 9 || fid < 0 || fc.ftype <= 0) {
@@ -249,7 +263,7 @@ int read_faces(const char *fname, size_t *n, struct face **faces)
     lid = 0;
     while (file_read_long_line(&linebuf, &linen, fp) && (nelem < *n)) {
         lid++;
-        if (linebuf[0] == '#' || linebuf[0] == '\n') continue;
+        if (linebuf[0] == '#' || linebuf[0] == '\r' || linebuf[0] == '\n') continue;
         int ret = sscanf(linebuf, "%d %d %lf %lf %lf %lf %lf %lf %lf", &fid, &fc.ftype,
                          &fc.x0, &fc.y0, &fc.z0, &fc.nx, &fc.ny, &fc.nz, &fc.r);
         if (ret < 9 || fid < 0 || fc.ftype <= 0) {
@@ -283,7 +297,7 @@ int read_points(const char *fname, size_t *n, struct data *data)
     size_t lid = 0;
     while (file_read_long_line(&linebuf, &linen, fp)) {
         lid++;
-        if (linebuf[0] == '#' || linebuf[0] == '\n') continue;
+        if (linebuf[0] == '#' || linebuf[0] == '\r' || linebuf[0] == '\n') continue;
         int ret = 0;
         for (int i=0; i<linen; i++) { /* count number of ';' */
             if (linebuf[i] == ';') ret++;
@@ -314,7 +328,7 @@ int read_points(const char *fname, size_t *n, struct data *data)
     size_t idx = 0;
     while (file_read_long_line(&linebuf, &linen, fp)) {
         lid++;
-        if (linebuf[0] == '#' || linebuf[0] == '\n') continue;
+        if (linebuf[0] == '#' || linebuf[0] == '\r' || linebuf[0] == '\n') continue;
         int fid = 0, ret = 0;
         double x, y, z, s;
         // ret = sscanf(linebuf, "%*d;%d;%*s ;%*d;%lf;%lf;%lf;;%lf", &fid, &x, &y, &z, &s);

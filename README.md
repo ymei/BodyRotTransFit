@@ -7,6 +7,8 @@ The penalty function for the fit is the sum of squares of the shortest distances
   - A `FACE_LINE` is a cylinder with `r=0` and no probe radius (`pr`) offset.
   - A `FACE_POINT` is a sphere with `r=0` and no probe radius (`pr`) offset.
 
+Positive `faceid` indicates that measurements are from outside (cylinder and sphere) where negative `faceid` means the measurements are from the inside.
+
 ## Input file format
 See `examples/`.
 
